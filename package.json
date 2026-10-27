@@ -1,0 +1,19 @@
+{
+  "name": "synora-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SYNORA: AI-Powered Institutional Complaint Monitoring, Tracking & Resolution Platform",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"API,WEB\" -c \"cyan,magenta\" \"npm --workspace=apps/api run dev\" \"npm --workspace=apps/web run dev\"",
+    "build": "npm --workspace=apps/api run build && npm --workspace=apps/web run build",
+    "test": "npm --workspace=apps/api test",
+    "seed": "npm --workspace=apps/api run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}

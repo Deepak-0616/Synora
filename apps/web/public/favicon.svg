@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="synoraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="50%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#6366F1" />
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="24" fill="#0A1128"/>
+  <!-- Infinity Emblem with Central Oversight Node -->
+  <path d="M30 38C23.37 38 18 43.37 18 50C18 56.63 23.37 62 30 62C38 62 45 42 50 42C55 42 62 62 70 62C76.63 62 82 56.63 82 50C82 43.37 76.63 38 70 38C62 38 55 58 50 58C45 58 38 38 30 38Z" 
+        stroke="url(#synoraGrad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="50" cy="50" r="5" fill="#06B6D4" />
+</svg>
