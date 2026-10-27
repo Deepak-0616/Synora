@@ -34,11 +34,11 @@ The platform establishes a centralized digital ecosystem connecting **Complainan
 
 | Layer | Technologies Used |
 | :--- | :--- |
-| **Frontend Web** | React 18, Vite, TypeScript, Tailwind CSS, React Router, Lucide Icons, Recharts |
-| **Backend REST API** | Node.js 22/24, Express.js, TypeScript, Zod Schema Validation, Multer |
-| **Database & Persistence** | Dual-mode: SQLite (Zero-config Wasm local relational DB) & PostgreSQL / Supabase with Row Level Security (RLS) |
+| **Frontend Web** | React 18, Vite, JavaScript (JSX), Tailwind CSS, React Router, Lucide Icons, Recharts |
+| **Backend REST API** | Node.js 22/24 (Native ESM `"type": "module"`), Express.js, JavaScript, Zod Schema Validation, Multer |
+| **Database & Persistence** | Dual-mode: SQLite (`sql.js` WebAssembly relational DB, zero-config native engine) & PostgreSQL / Supabase with Row Level Security (RLS) |
 | **Authentication & Security** | JWT (JSON Web Tokens), Bcrypt password hashing, RBAC middleware, In-memory rate limiting |
-| **Testing** | Vitest, Supertest (15/15 automated unit & security integration tests passing) |
+| **Testing** | Vitest, Supertest (15/15 automated unit & security integration tests passing in pure JS) |
 
 ---
 
@@ -60,54 +60,111 @@ All seed accounts share the standard password: **`Synora@2026!`**
 
 ---
 
-## 5. Quickstart & Local Execution
+## 5. Quickstart & Localhost Execution
 
-### 1. Clone & Install Dependencies
-```bash
-git clone https://github.com/your-org/synora.git
-cd SYNORA
+### 1. Prerequisites
+- **Node.js**: `v20.x`, `v22.x`, or `v24.x` (verified on Node `v24.22.0`)
+- **Package Manager**: npm `v10+` or `v11+`
 
-# Install all workspace dependencies
+> [!TIP]
+> **Windows PowerShell Users**: If PowerShell displays an execution policy error (`npm.ps1 cannot be loaded because running scripts is disabled`), use **`npm.cmd`** instead of `npm`, or run in standard Command Prompt (`cmd`).
+
+---
+
+### 2. Install Workspace Dependencies
+Run from the repository root:
+```powershell
+# Windows (PowerShell / CMD):
+npm.cmd install
+
+# macOS / Linux:
 npm install
 ```
 
-### 2. Database Migration & Seed
-The local relational database (`data/synora.db`) is automatically migrated and seeded with rich fictional AICTE test data on first start. You can also re-seed explicitly:
-```bash
+---
+
+### 3. Initialize & Seed Database
+The local SQLite relational database (`data/synora.db`) is automatically migrated and seeded with 8 users, bureaus, and realistic complaints on first server launch. You can also seed or reset manually at any time:
+
+```powershell
+# Windows (PowerShell / CMD):
+npm.cmd --workspace=apps/api run seed
+
+# Or run directly with Node:
+node apps/api/src/db/seed.js
+
+# macOS / Linux:
 npm --workspace=apps/api run seed
 ```
 
-### 3. Run Backend & Frontend Concurrently
-```bash
-# Starts API on http://localhost:4000 and Web on http://localhost:5173
+---
+
+### 4. Start Localhost Servers
+
+#### Option A: Run Both Services Concurrently (Recommended)
+Starts the backend API on **port 4000** and the React frontend Vite dev server on **port 5173**:
+
+```powershell
+# Windows (PowerShell / CMD):
+npm.cmd run dev
+
+# macOS / Linux:
 npm run dev
 ```
 
-Or run individual services:
-```bash
-# Backend REST API
-npm --workspace=apps/api run dev
+#### Option B: Run in Separate Terminals
 
-# Frontend React Application
+**Terminal 1 — Backend REST API:**
+```powershell
+# Windows (PowerShell / CMD):
+npm.cmd --workspace=apps/api run dev
+
+# Or run directly with native Node 24 watch mode:
+node --watch apps/api/src/index.js
+
+# macOS / Linux:
+npm --workspace=apps/api run dev
+```
+*API will start on `http://localhost:4000` with live database connection.*
+
+**Terminal 2 — Frontend Web Application:**
+```powershell
+# Windows (PowerShell / CMD):
+npm.cmd --workspace=apps/web run dev
+
+# macOS / Linux:
 npm --workspace=apps/web run dev
 ```
+*Frontend will start on `http://localhost:5173` with instant HMR and automatic API proxying.*
 
-Access the web portal at: **`http://localhost:5173`**  
-Access the backend health check at: **`http://localhost:4000/health`**
+---
+
+### 5. Localhost Access Endpoints
+
+| Service | Localhost URL | Description |
+| :--- | :--- | :--- |
+| **Frontend Portal** | [http://localhost:5173](http://localhost:5173) | Main application web interface (Citizen & Admin portals) |
+| **Backend Health** | [http://localhost:4000/health](http://localhost:4000/health) | API health check (`{"status":"healthy","database":"sqlite"}`) |
+| **REST API Base** | [http://localhost:4000/api/v1](http://localhost:4000/api/v1) | Backend routes (Auth, Complaints, Bureaus, Analytics, AI) |
 
 ---
 
 ## 6. Running Automated Tests
 
-SYNORA includes comprehensive unit, integration, and security authorization tests:
-```bash
+Run the complete Vitest test suite (15 unit, integration, and security authorization tests):
+
+```powershell
+# Windows (PowerShell / CMD):
+npm.cmd test
+
+# macOS / Linux:
 npm test
 ```
 
-### Test Coverage Highlights:
-- **`tests/sla.test.ts`**: Verifies 48h critical SLAs, 7d/14d/30d targets, overdue calculations, and approaching deadline flags.
-- **`tests/ai.test.ts`**: Verifies classification heuristics, duplicate matching across institutions, and structured 3-part summarization.
-- **`tests/security.test.ts`**: Verifies:
+### Test Coverage Breakdown:
+- **`tests/sla.test.js`**: Verifies 48h critical SLAs, 7d/14d/30d targets, overdue calculations, and approaching deadline flags.
+- **`tests/ai.test.js`**: Verifies classification heuristics, duplicate matching across institutions, and structured 3-part summarization.
+- **`tests/security.test.js`**: Verifies:
   - Unauthenticated requests rejected with 401.
   - Cross-user isolation: Complainant A is rejected with 403 when requesting Complainant B's private complaint.
   - Confidential notes isolation: Complainants receive 403 when requesting internal investigation notes.
@@ -119,16 +176,18 @@ npm test
 ## 7. Production Build & Docker
 
 ### Build Bundles
-```bash
-# Backend compilation
-npm --workspace=apps/api run build
+```powershell
+# Windows (PowerShell / CMD):
+npm.cmd --workspace=apps/web run build
+npm.cmd --workspace=apps/api run build
 
-# Frontend Vite production bundle
+# macOS / Linux:
 npm --workspace=apps/web run build
+npm --workspace=apps/api run build
 ```
 
 ### Docker Deployment
-```bash
+```powershell
 docker compose up -d --build
 ```
 
