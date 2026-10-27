@@ -2,13 +2,14 @@
   "name": "synora-api",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "SYNORA REST API Backend",
-  "main": "dist/index.js",
+  "main": "src/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "seed": "tsx src/db/seed.ts",
+    "dev": "node --watch src/index.js",
+    "build": "node --check src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/db/seed.js",
     "test": "vitest run"
   },
   "dependencies": {
@@ -25,19 +26,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.9",
-    "@types/multer": "^1.4.12",
-    "@types/node": "^22.13.10",
-    "@types/pg": "^8.11.11",
-    "@types/sql.js": "^1.4.9",
-    "@types/supertest": "^6.0.2",
-    "@types/uuid": "^10.0.0",
     "supertest": "^7.0.0",
-    "tsx": "^4.19.3",
-    "typescript": "^5.8.2",
     "vitest": "^3.0.8"
   }
 }

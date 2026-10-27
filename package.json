@@ -2,6 +2,7 @@
   "name": "synora-workspace",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "SYNORA: AI-Powered Institutional Complaint Monitoring, Tracking & Resolution Platform",
   "workspaces": [
     "apps/api",
