@@ -22,6 +22,7 @@ export const UserManagementPage = () => {
   const [newBureauId, setNewBureauId] = useState("");
   const [newIsActive, setNewIsActive] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [modalError, setModalError] = useState(null);
   const [search, setSearch] = useState("");
   useEffect(() => {
     loadData();
@@ -48,10 +49,12 @@ export const UserManagementPage = () => {
     setNewRole(u.role);
     setNewBureauId(u.bureau_id || "");
     setNewIsActive(u.is_active ? 1 : 0);
+    setModalError(null);
   };
   const handleSaveUser = async () => {
     if (!editingUser) return;
     setSaving(true);
+    setModalError(null);
     try {
       await api.patch(`/users/${editingUser.id}/role`, {
         role: newRole,
@@ -61,7 +64,7 @@ export const UserManagementPage = () => {
       setEditingUser(null);
       loadData();
     } catch (err) {
-      alert(err.message || "Failed to update user");
+      setModalError(err.message || "Failed to update user");
     } finally {
       setSaving(false);
     }
@@ -239,6 +242,12 @@ export const UserManagementPage = () => {
     title={`Edit Role: ${editingUser?.full_name}`}
   >
         <div className="space-y-4 text-xs">
+          {modalError && (
+            <div className="p-2.5 rounded-lg text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{modalError}</span>
+            </div>
+          )}
           <div>
             <label className="block font-bold text-slate-700 mb-1">Assigned Role</label>
             <select

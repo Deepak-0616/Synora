@@ -24,7 +24,7 @@ export async function respondRFI(req, res, next) {
     const { rfiId } = req.params;
     const validated = rfiResponseSchema.parse(req.body);
     const ip = req.ip || req.socket.remoteAddress;
-    const rfi = await RFIService.respondRFI(rfiId, req.user.userId, validated.response_details, ip);
+    const rfi = await RFIService.respondRFI(rfiId, req.user.userId, req.user.role, validated.response_details, ip);
     res.status(200).json(rfi);
   } catch (err) {
     next(err);

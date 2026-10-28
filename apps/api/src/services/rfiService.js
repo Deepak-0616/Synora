@@ -59,25 +59,23 @@ export class RFIService {
     return rfi;
   }
   /**
-   * Complainant responds to information request
+   * Complainant or authorized staff responds to information request
    */
-  static async respondRFI(rfiId, complainantId, responseDetails, ipAddress) {
+  static async respondRFI(rfiId, userId, userRole, responseDetails, ipAddress) {
     const rfi = await this.getRFIById(rfiId);
     if (!rfi) {
       const err = new Error("Information request not found");
       err.statusCode = 404;
       throw err;
     }
-    if (rfi.complainant_id !== complainantId) {
+    const isOwner = rfi.complainant_id === userId;
+    const isStaffOrAdmin = userRole === "system_admin" || userRole === "bureau_admin" || userRole === "officer";
+    if (!isOwner && !isStaffOrAdmin) {
       const err = new Error("Access denied. You can only respond to requests addressed to you.");
       err.statusCode = 403;
       throw err;
     }
-    if (rfi.status !== "PENDING") {
-      const err = new Error(`This information request has already been ${rfi.status.toLowerCase()}.`);
-      err.statusCode = 400;
-      throw err;
-    }
+    const isUpdate = rfi.status === "RESPONDED";
     await db.execute(
       `UPDATE information_requests
        SET response_details = ?,
@@ -86,31 +84,52 @@ export class RFIService {
        WHERE id = ?;`,
       [responseDetails.trim(), rfiId]
     );
-    await ComplaintService.transitionStatus(
-      rfi.complaint_id,
-      "IN_PROGRESS",
-      complainantId,
-      "complainant",
-      "Complainant provided response to information request",
-      void 0,
-      ipAddress
-    );
+
+    // If complaint was awaiting complainant response, transition to IN_PROGRESS
+    const complaint = await db.queryOne("SELECT status FROM complaints WHERE id = ?;", [rfi.complaint_id]);
+    if (complaint && complaint.status === "AWAITING_COMPLAINANT_RESPONSE") {
+      await ComplaintService.transitionStatus(
+        rfi.complaint_id,
+        "IN_PROGRESS",
+        userId,
+        userRole || "complainant",
+        isStaffOrAdmin && !isOwner
+          ? "Investigation team recorded response to information request"
+          : "Complainant provided response to information request",
+        void 0,
+        ipAddress
+      );
+    }
+
     await logAudit({
-      actorId: complainantId,
-      action: "RFI_RESPONDED",
+      actorId: userId,
+      action: isUpdate ? "RFI_RESPONSE_UPDATED" : "RFI_RESPONDED",
       entityType: "information_request",
       entityId: rfiId,
-      newValues: { complaintId: rfi.complaint_id },
+      newValues: { complaintId: rfi.complaint_id, isUpdate },
       ipAddress
     });
-    await notifyUser({
-      userId: rfi.officer_id,
-      complaintId: rfi.complaint_id,
-      type: "RFI_RESPONDED",
-      title: "Complainant Responded to Information Request",
-      message: `Complainant has submitted response for case information request.`,
-      link: `/complaints/${rfi.complaint_id}`
-    });
+
+    if (rfi.officer_id && !isStaffOrAdmin) {
+      await notifyUser({
+        userId: rfi.officer_id,
+        complaintId: rfi.complaint_id,
+        type: isUpdate ? "RFI_UPDATED" : "RFI_RESPONDED",
+        title: isUpdate ? "Complainant Updated Information Response" : "Complainant Responded to Information Request",
+        message: `Response details have been updated for case clarification inquiry.`,
+        link: `/complaints/${rfi.complaint_id}`
+      });
+    } else if (rfi.complainant_id && isStaffOrAdmin) {
+      await notifyUser({
+        userId: rfi.complainant_id,
+        complaintId: rfi.complaint_id,
+        type: "RFI_RECORDED_BY_OFFICER",
+        title: "Official Response Statement Recorded",
+        message: `The vigilance desk recorded a statement regarding case clarification.`,
+        link: `/complaints/${rfi.complaint_id}`
+      });
+    }
+
     const updated = await this.getRFIById(rfiId);
     if (!updated) throw new Error("Failed to retrieve updated RFI");
     return updated;

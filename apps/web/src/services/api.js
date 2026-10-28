@@ -31,7 +31,12 @@ class ApiClient {
       let errorMessage = "An error occurred while processing your request.";
       try {
         const errorData = await response.json();
-        errorMessage = errorData.error || errorData.message || errorMessage;
+        if (errorData.details && Array.isArray(errorData.details) && errorData.details.length > 0) {
+          const detailMsgs = errorData.details.map((d) => d.message || `${d.field}: invalid value`).join(", ");
+          errorMessage = detailMsgs;
+        } else {
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        }
       } catch {
         errorMessage = `Server returned status ${response.status}: ${response.statusText}`;
       }

@@ -28,6 +28,7 @@ export const ReportsPage = () => {
   const [statusDist, setStatusDist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
   useEffect(() => {
     loadAnalytics();
   }, []);
@@ -53,6 +54,7 @@ export const ReportsPage = () => {
   const handleExportCsv = async () => {
     try {
       setExporting(true);
+      setExportError(null);
       const blob = await api.get("/analytics/export-csv");
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -63,7 +65,7 @@ export const ReportsPage = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message || "Failed to export CSV");
+      setExportError(err.message || "Failed to export CSV");
     } finally {
       setExporting(false);
     }
@@ -72,6 +74,17 @@ export const ReportsPage = () => {
     return <LoadingSpinner message="Aggregating statutory reporting metrics..." size="lg" />;
   }
   return <div className="space-y-8">
+      {exportError && (
+        <div className="p-3 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{exportError}</span>
+          </div>
+          <button onClick={() => setExportError(null)} className="text-rose-600 hover:text-rose-900 font-bold text-xs">
+            ✕
+          </button>
+        </div>
+      )}
       {
     /* Header & Export Action */
   }

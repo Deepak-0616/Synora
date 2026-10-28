@@ -11,18 +11,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required")
 });
 export const createComplaintSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters long").max(255),
-  description: z.string().min(20, "Description must be at least 20 characters long"),
+  title: z.string().min(2, "Title is required (at least 2 characters)").max(255),
+  description: z.string().min(2, "Description is required (at least 2 characters)"),
   category: z.string().min(2, "Category is required"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).default("MEDIUM"),
-  institution_name: z.string().min(3, "Institution name is required"),
+  institution_name: z.string().min(2, "Institution name is required"),
   institution_id: z.preprocess((v) => (!v ? null : v), z.string().optional().nullable()),
   incident_date: z.preprocess((v) => (!v ? null : v), z.string().optional().nullable()),
   bureau_id: z.preprocess((v) => (!v ? null : v), z.string().min(5).optional().nullable())
 });
 export const updateComplaintSchema = z.object({
-  title: z.string().min(5).optional(),
-  description: z.string().min(20).optional(),
+  title: z.string().min(2).optional(),
+  description: z.string().min(2).optional(),
   category: z.string().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
   institution_name: z.string().optional()
@@ -49,20 +49,20 @@ export const transitionStatusSchema = z.object({
   rejection_reason: z.string().optional()
 });
 export const internalNoteSchema = z.object({
-  note: z.string().min(3, "Internal note cannot be empty")
+  note: z.string().min(1, "Internal note cannot be empty")
 });
 export const rfiRequestSchema = z.object({
-  request_details: z.string().min(5, "Request details must be at least 5 characters")
+  request_details: z.string().min(1, "Request details cannot be empty")
 });
 export const rfiResponseSchema = z.object({
-  response_details: z.string().min(5, "Response details must be at least 5 characters")
+  response_details: z.string().min(1, "Response details cannot be empty")
 });
 export const proposeResolutionSchema = z.object({
-  findings: z.string().min(10, "Investigation findings are required"),
-  resolution_summary: z.string().min(10, "Internal resolution summary is required"),
-  complainant_visible_summary: z.string().min(10, "Complainant-visible resolution statement is required")
+  findings: z.string().min(1, "Investigation findings cannot be empty"),
+  resolution_summary: z.string().min(1, "Internal resolution summary cannot be empty"),
+  complainant_visible_summary: z.string().min(1, "Complainant-visible resolution statement cannot be empty")
 });
 export const escalateComplaintSchema = z.object({
-  reason: z.string().min(10, "Detailed escalation reason is required"),
+  reason: z.string().min(1, "Detailed escalation reason is required"),
   to_bureau_id: z.preprocess((v) => (!v ? null : v), z.string().min(5).optional().nullable())
 });

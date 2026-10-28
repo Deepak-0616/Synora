@@ -53,6 +53,16 @@ export const ComplaintDetailPage = () => {
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
   const [downloadingDocId, setDownloadingDocId] = useState(null);
+  const [rfiMessage, setRfiMessage] = useState(null);
+  const [editingRfiId, setEditingRfiId] = useState(null);
+  const [editingRfiReply, setEditingRfiReply] = useState("");
+  const [transitionError, setTransitionError] = useState(null);
+  const [assignError, setAssignError] = useState(null);
+  const [rfiModalError, setRfiModalError] = useState(null);
+  const [resolutionError, setResolutionError] = useState(null);
+  const [escalateError, setEscalateError] = useState(null);
+  const [noteError, setNoteError] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -123,18 +133,20 @@ export const ComplaintDetailPage = () => {
     e.preventDefault();
     if (!newNote.trim() || !id) return;
     setSubmittingNote(true);
+    setNoteError(null);
     try {
       const note = await api.post(`/complaints/${id}/internal-notes`, { note: newNote });
       setInternalNotes([note, ...internalNotes]);
       setNewNote("");
     } catch (err) {
-      alert(err.message || "Failed to add note");
+      setNoteError(err.message || "Failed to add note");
     } finally {
       setSubmittingNote(false);
     }
   };
   const handleCreateRfi = async () => {
     if (!rfiQuestion.trim() || !id) return;
+    setRfiModalError(null);
     try {
       const rfi = await api.post(`/complaints/${id}/rfis`, { request_details: rfiQuestion });
       setRfis([rfi, ...rfis]);
@@ -142,24 +154,33 @@ export const ComplaintDetailPage = () => {
       setRfiQuestion("");
       loadComplaintData();
     } catch (err) {
-      alert(err.message || "Failed to create request");
+      setRfiModalError(err.message || "Failed to create request");
     }
   };
-  const handleRespondRfi = async (rfiId) => {
-    if (!rfiReply.trim()) return;
+  const handleRespondRfi = async (rfiId, overrideText) => {
+    const textToSubmit = (overrideText !== undefined ? overrideText : rfiReply).trim();
+    if (!textToSubmit) {
+      setRfiMessage({ type: "error", text: "Please enter your response before submitting." });
+      return;
+    }
     setSubmittingRfi(true);
+    setRfiMessage(null);
     try {
-      await api.post(`/complaints/${id}/rfis/${rfiId}/respond`, { response_details: rfiReply });
+      await api.post(`/complaints/${id}/rfis/${rfiId}/respond`, { response_details: textToSubmit });
       setRfiReply("");
-      loadComplaintData();
+      setEditingRfiId(null);
+      setEditingRfiReply("");
+      setRfiMessage({ type: "success", text: "Response recorded and complaint updated successfully!" });
+      await loadComplaintData();
     } catch (err) {
-      alert(err.message || "Failed to submit response");
+      setRfiMessage({ type: "error", text: err.message || "Failed to submit response" });
     } finally {
       setSubmittingRfi(false);
     }
   };
   const handleTransitionStatus = async () => {
     if (!id) return;
+    setTransitionError(null);
     try {
       await api.post(`/complaints/${id}/transitions`, {
         to_status: selectedNextStatus,
@@ -169,11 +190,12 @@ export const ComplaintDetailPage = () => {
       setTransitionNote("");
       loadComplaintData();
     } catch (err) {
-      alert(err.message || "Failed to transition status");
+      setTransitionError(err.message || "Failed to transition status");
     }
   };
   const handleAssignSubmit = async () => {
     if (!id) return;
+    setAssignError(null);
     try {
       await api.post(`/complaints/${id}/assignments`, {
         bureau_id: assignBureauId ? assignBureauId : null,
@@ -183,11 +205,12 @@ export const ComplaintDetailPage = () => {
       setShowAssignModal(false);
       loadComplaintData();
     } catch (err) {
-      alert(err.message || "Failed to assign complaint");
+      setAssignError(err.message || "Failed to assign complaint");
     }
   };
   const handleProposeResolution = async () => {
     if (!id) return;
+    setResolutionError(null);
     try {
       await api.post(`/complaints/${id}/resolutions`, {
         findings,
@@ -197,27 +220,29 @@ export const ComplaintDetailPage = () => {
       setShowResolutionModal(false);
       loadComplaintData();
     } catch (err) {
-      alert(err.message || "Failed to propose resolution");
+      setResolutionError(err.message || "Failed to propose resolution");
     }
   };
   const handleApproveResolution = async (resId) => {
     if (!id) return;
+    setActionError(null);
     try {
       await api.post(`/complaints/${id}/resolutions/${resId}/approve`);
       loadComplaintData();
     } catch (err) {
-      alert(err.message || "Failed to approve resolution");
+      setActionError(err.message || "Failed to approve resolution");
     }
   };
   const handleEscalateCase = async () => {
     if (!id || !escalateReason.trim()) return;
+    setEscalateError(null);
     try {
       await api.post(`/complaints/${id}/escalations`, { reason: escalateReason });
       setShowEscalateModal(false);
       setEscalateReason("");
       loadComplaintData();
     } catch (err) {
-      alert(err.message || "Failed to escalate case");
+      setEscalateError(err.message || "Failed to escalate case");
     }
   };
 
@@ -234,7 +259,7 @@ export const ComplaintDetailPage = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      alert(err.message || "Failed to download document");
+      setActionError(err.message || "Failed to download document");
     } finally {
       setDownloadingDocId(null);
     }
@@ -251,7 +276,11 @@ export const ComplaintDetailPage = () => {
         </Link>
       </div>;
   }
-  const pendingComplainantRfi = rfis.find((r) => r.status === "PENDING" && isComplainant);
+  const pendingRfi = rfis.find((r) => r.status === "PENDING");
+  const canRespondToRfi = pendingRfi && (
+    (isComplainant && pendingRfi.complainant_id === user?.id) ||
+    isStaff
+  );
   return <div className="space-y-6">
       {
     /* Top Breadcrumb & Controls */
@@ -286,6 +315,7 @@ export const ComplaintDetailPage = () => {
     onClick={() => {
       setAssignBureauId(complaint.bureau_id || "");
       loadBureauOfficers(complaint.bureau_id || "");
+      setAssignError(null);
       setShowAssignModal(true);
     }}
     className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
@@ -294,28 +324,40 @@ export const ComplaintDetailPage = () => {
               </button>}
 
             <button
-    onClick={() => setShowTransitionModal(true)}
+    onClick={() => {
+      setTransitionError(null);
+      setShowTransitionModal(true);
+    }}
     className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm"
   >
               Update Status
             </button>
 
             <button
-    onClick={() => setShowRfiModal(true)}
+    onClick={() => {
+      setRfiModalError(null);
+      setShowRfiModal(true);
+    }}
     className="px-3 py-1.5 rounded-lg text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200"
   >
               Request Proof (RFI)
             </button>
 
             {complaint.status !== "RESOLVED" && complaint.status !== "CLOSED" && <button
-    onClick={() => setShowResolutionModal(true)}
+    onClick={() => {
+      setResolutionError(null);
+      setShowResolutionModal(true);
+    }}
     className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200"
   >
                 Propose Resolution
               </button>}
 
             {!complaint.is_escalated && <button
-    onClick={() => setShowEscalateModal(true)}
+    onClick={() => {
+      setEscalateError(null);
+      setShowEscalateModal(true);
+    }}
     className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200"
     title="Escalate to Supervisory Cell"
   >
@@ -323,6 +365,18 @@ export const ComplaintDetailPage = () => {
               </button>}
           </div>}
       </div>
+
+      {actionError && (
+        <div className="p-3 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button onClick={() => setActionError(null)} className="text-rose-600 hover:text-rose-900 font-bold text-xs">
+            ✕
+          </button>
+        </div>
+      )}
 
       {
     /* SLA Alert Header */
@@ -355,34 +409,53 @@ export const ComplaintDetailPage = () => {
       {
     /* Complainant RFI Alert & Inline Response Form */
   }
-      {pendingComplainantRfi && <div className="p-6 rounded-2xl bg-purple-50 border-2 border-purple-200 shadow-sm space-y-4">
+      {canRespondToRfi && <div className="p-6 rounded-2xl bg-purple-50 border-2 border-purple-200 shadow-sm space-y-4">
           <div className="flex items-center gap-2 text-purple-900 font-bold text-sm">
             <AlertTriangle className="w-5 h-5 text-purple-600" />
-            <span>Action Required: Investigating Officer Has Requested Information</span>
+            <span>
+              {isComplainant
+                ? "Action Required: Investigating Officer Has Requested Information"
+                : "Active Inquiry: Provide or Record Response to Clarification Request"}
+            </span>
           </div>
           <div className="p-4 bg-white rounded-xl border border-purple-100 text-xs text-slate-800 font-medium leading-relaxed">
-            "{pendingComplainantRfi.request_details}"
+            "{pendingRfi.request_details}"
           </div>
+
+          {rfiMessage && (
+            <div
+              className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                rfiMessage.type === "success"
+                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                  : "bg-rose-100 text-rose-800 border border-rose-200"
+              }`}
+            >
+              <span>{rfiMessage.text}</span>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="block text-xs font-bold text-purple-900 uppercase">
-              Your Written Response
+              {isComplainant ? "Your Written Response" : "Official Response Statement"}
             </label>
             <textarea
-    rows={3}
-    value={rfiReply}
-    onChange={(e) => setRfiReply(e.target.value)}
-    placeholder="Provide requested details, room numbers, dates, or clarify statements..."
-    className="w-full p-3 bg-white border border-purple-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-600"
-  />
+              rows={3}
+              value={rfiReply}
+              onChange={(e) => {
+                setRfiReply(e.target.value);
+                if (rfiMessage) setRfiMessage(null);
+              }}
+              placeholder="Provide requested details, room numbers, dates, or clarify statements..."
+              className="w-full p-3 bg-white border border-purple-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-600"
+            />
             <div className="flex justify-end">
               <button
-    type="button"
-    disabled={submittingRfi || !rfiReply.trim()}
-    onClick={() => handleRespondRfi(pendingComplainantRfi.id)}
-    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 shadow-sm disabled:opacity-50"
-  >
-                <Send className="w-3.5 h-3.5" /> Submit Response
+                type="button"
+                disabled={submittingRfi || !rfiReply.trim()}
+                onClick={() => handleRespondRfi(pendingRfi.id)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 shadow-sm disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" /> {submittingRfi ? "Submitting..." : "Submit Response"}
               </button>
             </div>
           </div>
@@ -514,42 +587,136 @@ export const ComplaintDetailPage = () => {
                 Information & Clarification Inquiries
               </h3>
               {isStaff && <button
-    onClick={() => setShowRfiModal(true)}
-    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-purple-700 hover:bg-purple-800"
-  >
+                onClick={() => {
+                  setRfiModalError(null);
+                  setShowRfiModal(true);
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-purple-700 hover:bg-purple-800"
+              >
                   + New Information Request
                 </button>}
             </div>
 
+            {rfiMessage && (
+              <div
+                className={`p-3 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 ${
+                  rfiMessage.type === "success"
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    : "bg-rose-100 text-rose-800 border border-rose-200"
+                }`}
+              >
+                <span>{rfiMessage.text}</span>
+                <button
+                  type="button"
+                  onClick={() => setRfiMessage(null)}
+                  className="font-bold text-xs hover:opacity-75"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {rfis.length === 0 ? <p className="text-xs text-slate-400 py-6 text-center">
                 No information requests issued for this complaint.
-              </p> : rfis.map((rfi) => <div key={rfi.id} className="p-4 rounded-xl border border-slate-200 space-y-3 bg-slate-50/50">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-800">Inquiry by Officer:</span>
-                      <span className="text-slate-600">{rfi.officer_name || "Investigative Officer"}</span>
+              </p> : rfis.map((rfi) => {
+                const canRespond = (isComplainant && rfi.complainant_id === user?.id) || isStaff;
+                const isEditingThis = editingRfiId === rfi.id;
+
+                return (
+                  <div key={rfi.id} className="p-4 rounded-xl border border-slate-200 space-y-3 bg-slate-50/50">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800">Inquiry by Officer:</span>
+                        <span className="text-slate-600">{rfi.officer_name || "Investigative Officer"}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${rfi.status === "RESPONDED" ? "bg-emerald-100 text-emerald-800" : "bg-purple-100 text-purple-800"}`}>
+                        {rfi.status}
+                      </span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${rfi.status === "RESPONDED" ? "bg-emerald-100 text-emerald-800" : "bg-purple-100 text-purple-800"}`}>
-                      {rfi.status}
-                    </span>
+
+                    <p className="text-xs text-slate-800 font-medium leading-relaxed bg-white p-3 rounded-lg border border-slate-200">
+                      "{rfi.request_details}"
+                    </p>
+
+                    {rfi.response_details && !isEditingThis && (
+                      <div className="pl-4 border-l-2 border-emerald-500 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-emerald-800">
+                            Recorded Response:
+                          </span>
+                          {canRespond && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingRfiId(rfi.id);
+                                setEditingRfiReply(rfi.response_details);
+                                if (rfiMessage) setRfiMessage(null);
+                              }}
+                              className="text-[11px] font-bold text-purple-700 hover:text-purple-900 hover:underline"
+                            >
+                              Edit / Update Response
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed bg-emerald-50/40 p-3 rounded-lg border border-emerald-100">
+                          {rfi.response_details}
+                        </p>
+                        <span className="text-[10px] text-slate-400 block">
+                          Responded: {new Date(rfi.responded_at || "").toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+
+                    {(!rfi.response_details || isEditingThis) && canRespond && (
+                      <div className="pt-2 pl-4 border-l-2 border-purple-400 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-purple-900">
+                            {isEditingThis
+                              ? "Update Written Response / Supporting Details:"
+                              : (isComplainant ? "Provide Your Written Response:" : "Record / Submit Response to this Inquiry:")}
+                          </span>
+                          {isEditingThis && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingRfiId(null);
+                                setEditingRfiReply("");
+                              }}
+                              className="text-[11px] text-slate-500 hover:text-slate-800"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          rows={2}
+                          value={isEditingThis ? editingRfiReply : rfiReply}
+                          onChange={(e) => {
+                            if (isEditingThis) {
+                              setEditingRfiReply(e.target.value);
+                            } else {
+                              setRfiReply(e.target.value);
+                            }
+                            if (rfiMessage) setRfiMessage(null);
+                          }}
+                          placeholder="Type your response to this clarification inquiry..."
+                          className="w-full p-2.5 bg-white border border-purple-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-600"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            disabled={submittingRfi || !(isEditingThis ? editingRfiReply.trim() : rfiReply.trim())}
+                            onClick={() => handleRespondRfi(rfi.id, isEditingThis ? editingRfiReply : rfiReply)}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 shadow-sm disabled:opacity-50"
+                          >
+                            <Send className="w-3.5 h-3.5" /> {submittingRfi ? "Submitting..." : (isEditingThis ? "Update Response" : "Submit Response")}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  <p className="text-xs text-slate-800 font-medium leading-relaxed bg-white p-3 rounded-lg border border-slate-200">
-                    "{rfi.request_details}"
-                  </p>
-
-                  {rfi.response_details && <div className="pl-4 border-l-2 border-emerald-500 space-y-1">
-                      <span className="text-[11px] font-bold text-emerald-800">
-                        Complainant Response:
-                      </span>
-                      <p className="text-xs text-slate-700 leading-relaxed bg-emerald-50/40 p-3 rounded-lg border border-emerald-100">
-                        {rfi.response_details}
-                      </p>
-                      <span className="text-[10px] text-slate-400 block">
-                        Responded: {new Date(rfi.responded_at || "").toLocaleString()}
-                      </span>
-                    </div>}
-                </div>)}
+                );
+              })}
           </div>}
 
         {
@@ -599,6 +766,13 @@ export const ComplaintDetailPage = () => {
                 Confidential Investigation Log: Internal notes are strictly restricted to authorized staff and are never exposed to complainants.
               </span>
             </div>
+
+            {noteError && (
+              <div className="p-2.5 rounded-lg text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{noteError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleAddNote} className="space-y-3">
               <textarea
@@ -706,6 +880,12 @@ export const ComplaintDetailPage = () => {
   }
       <Modal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} title="Assign / Reassign Complaint">
         <div className="space-y-4 text-xs">
+          {assignError && (
+            <div className="p-2.5 rounded-lg text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{assignError}</span>
+            </div>
+          )}
           <div>
             <label className="block font-bold text-slate-700 mb-1">Select Bureau</label>
             <select
@@ -766,6 +946,12 @@ export const ComplaintDetailPage = () => {
   }
       <Modal isOpen={showTransitionModal} onClose={() => setShowTransitionModal(false)} title="Update Workflow Status">
         <div className="space-y-4 text-xs">
+          {transitionError && (
+            <div className="p-2.5 rounded-lg text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{transitionError}</span>
+            </div>
+          )}
           <div>
             <label className="block font-bold text-slate-700 mb-1">Next Workflow Status</label>
             <select
@@ -818,6 +1004,12 @@ export const ComplaintDetailPage = () => {
   }
       <Modal isOpen={showRfiModal} onClose={() => setShowRfiModal(false)} title="Request Additional Proof / Clarification">
         <div className="space-y-4 text-xs">
+          {rfiModalError && (
+            <div className="p-2.5 rounded-lg text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{rfiModalError}</span>
+            </div>
+          )}
           <p className="text-slate-500">
             This will place the complaint in <strong className="font-bold text-purple-700">Awaiting Complainant Response</strong> status until the complainant responds.
           </p>
@@ -854,6 +1046,12 @@ export const ComplaintDetailPage = () => {
   }
       <Modal isOpen={showResolutionModal} onClose={() => setShowResolutionModal(false)} title="Document Case Resolution">
         <div className="space-y-4 text-xs">
+          {resolutionError && (
+            <div className="p-2.5 rounded-lg text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{resolutionError}</span>
+            </div>
+          )}
           <div>
             <label className="block font-bold text-slate-700 mb-1">Investigation Findings *</label>
             <textarea
@@ -907,6 +1105,12 @@ export const ComplaintDetailPage = () => {
   }
       <Modal isOpen={showEscalateModal} onClose={() => setShowEscalateModal(false)} title="Escalate Case to Higher Authority">
         <div className="space-y-4 text-xs">
+          {escalateError && (
+            <div className="p-2.5 rounded-lg text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{escalateError}</span>
+            </div>
+          )}
           <p className="text-slate-600">
             Escalation triggers priority notifications to Bureau Heads and Council Ombudsman for emergency regulatory intervention.
           </p>

@@ -305,7 +305,7 @@ export async function seedDatabase(force = false) {
       description: "Assistant professors completing mandatory 5 years with qualifying API scores under AICTE 7th Pay guidelines have not been scheduled for assessment for over 18 months, causing financial loss.",
       category: "Faculty & Staff Grievance",
       priority: "LOW",
-      status: "ACKNOWLEDGED",
+      status: "AWAITING_COMPLAINANT_RESPONSE",
       institution: "Delhi Polytechnic Institute of Technology, New Delhi",
       inst_id: "1-68291011",
       incident_date: "2026-10-10",
@@ -412,6 +412,9 @@ export async function seedDatabase(force = false) {
     { id: "h7001", cid: "c1000000-0000-0000-0000-000000000007", actor: "u1000000-0000-0000-0000-000000000007", from: null, to: "SUBMITTED", note: "Grievance submitted", date: new Date(now.getTime() - 5 * 24 * 3600 * 1000).toISOString() },
     { id: "h7002", cid: "c1000000-0000-0000-0000-000000000007", actor: "u1000000-0000-0000-0000-000000000004", from: "SUBMITTED", to: "IN_PROGRESS", note: "Surprise campus inspection conducted", date: new Date(now.getTime() - 3 * 24 * 3600 * 1000).toISOString() },
     { id: "h7003", cid: "c1000000-0000-0000-0000-000000000007", actor: "u1000000-0000-0000-0000-000000000004", from: "IN_PROGRESS", to: "AWAITING_INTERNAL_REVIEW", note: "Formal closure notice drafted; submitted for Bureau Admin approval", date: new Date(now.getTime() - 12 * 3600 * 1000).toISOString() },
+    // Case 8 timeline
+    { id: "h8001", cid: "c1000000-0000-0000-0000-000000000008", actor: "u1000000-0000-0000-0000-000000000007", from: null, to: "SUBMITTED", note: "Faculty promotion grievance submitted", date: new Date(now.getTime() - 24 * 3600 * 1000).toISOString() },
+    { id: "h8002", cid: "c1000000-0000-0000-0000-000000000008", actor: "u1000000-0000-0000-0000-000000000001", from: "SUBMITTED", to: "AWAITING_COMPLAINANT_RESPONSE", note: "RFI issued requesting annual API appraisal scorecards", date: new Date(now.getTime() - 12 * 3600 * 1000).toISOString() },
     // Case 10 timeline
     { id: "h10001", cid: "c1000000-0000-0000-0000-000000000010", actor: "u1000000-0000-0000-0000-000000000007", from: null, to: "SUBMITTED", note: "Grievance submitted by complainant", date: new Date(now.getTime() - 2 * 3600 * 1000).toISOString() }
   ];
@@ -481,6 +484,24 @@ export async function seedDatabase(force = false) {
       null,
       "PENDING",
       new Date(now.getTime() - 20 * 3600 * 1000).toISOString(),
+      null
+    ]
+  );
+
+  // RFI 3: Case 8 - OPEN PENDING for Dr. Sunita Rao (Allows Dr. Sunita to test responding to RFI!)
+  await db.execute(
+    `INSERT OR REPLACE INTO information_requests (
+      id, complaint_id, officer_id, complainant_id, request_details, response_details, status, requested_at, responded_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    [
+      "r1000000-0000-0000-0000-000000000003",
+      "c1000000-0000-0000-0000-000000000008",
+      "u1000000-0000-0000-0000-000000000001",
+      "u1000000-0000-0000-0000-000000000007",
+      "Please upload certified copies of your annual API appraisal scorecards for years 2021-2025 and endorsement from Department Head.",
+      null,
+      "PENDING",
+      new Date(now.getTime() - 12 * 3600 * 1000).toISOString(),
       null
     ]
   );
@@ -678,6 +699,19 @@ export async function seedDatabase(force = false) {
       is_read: 0,
       link: "/complaints/c1000000-0000-0000-0000-000000000004",
       created_at: new Date(now.getTime() - 6 * 3600 * 1000).toISOString()
+    },
+
+    // Complainant Dr. Sunita notifications
+    {
+      id: "m1000000-0000-0000-0000-000000000006",
+      user_id: "u1000000-0000-0000-0000-000000000007",
+      complaint_id: "c1000000-0000-0000-0000-000000000008",
+      type: "RFI_REQUESTED",
+      title: "Action Required: Clarification Requested",
+      message: "Grievance Redressal Cell requested API appraisal documentation for complaint SYN-2026-00108.",
+      is_read: 0,
+      link: "/complaints/c1000000-0000-0000-0000-000000000008",
+      created_at: new Date(now.getTime() - 10 * 3600 * 1000).toISOString()
     }
   ];
 
