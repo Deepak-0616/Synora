@@ -222,7 +222,8 @@ export class ComplaintService {
     return {
       ...complaint,
       sla_status: sla.status,
-      days_remaining: sla.daysRemaining
+      days_remaining: sla.daysRemaining,
+      allowed_transitions: this.getAllowedTransitions(complaint.status, userRole)
     };
   }
   /**
@@ -367,22 +368,90 @@ export class ComplaintService {
     return updated;
   }
   /**
+   * Returns list of allowed next status values from a given status for a given actor role
+   */
+  static getAllowedTransitions(from, actorRole) {
+    const isAdmin = actorRole === "system_admin" || actorRole === "bureau_admin";
+
+    const standardTransitions = {
+      SUBMITTED: [
+        "ACKNOWLEDGED",
+        "UNDER_REVIEW",
+        "IN_PROGRESS",
+        "REJECTED"
+      ],
+      ACKNOWLEDGED: [
+        "UNDER_REVIEW",
+        "IN_PROGRESS",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "ESCALATED",
+        "REJECTED"
+      ],
+      UNDER_REVIEW: [
+        "IN_PROGRESS",
+        "ACKNOWLEDGED",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "ESCALATED",
+        "REJECTED"
+      ],
+      IN_PROGRESS: [
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "UNDER_REVIEW",
+        "ACKNOWLEDGED",
+        "RESOLVED",
+        "ESCALATED"
+      ],
+      AWAITING_COMPLAINANT_RESPONSE: [
+        "IN_PROGRESS",
+        "UNDER_REVIEW",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "ESCALATED"
+      ],
+      AWAITING_INTERNAL_REVIEW: [
+        "RESOLVED",
+        "IN_PROGRESS",
+        "UNDER_REVIEW",
+        "ESCALATED"
+      ],
+      RESOLVED: [
+        "CLOSED",
+        "IN_PROGRESS",
+        "UNDER_REVIEW"
+      ],
+      CLOSED: isAdmin ? ["IN_PROGRESS", "UNDER_REVIEW", "RESOLVED"] : [],
+      ESCALATED: [
+        "IN_PROGRESS",
+        "UNDER_REVIEW",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED"
+      ],
+      REJECTED: isAdmin ? ["UNDER_REVIEW", "IN_PROGRESS"] : []
+    };
+
+    let allowed = standardTransitions[from] || [];
+
+    // Filter out REJECTED and CLOSED if not an administrator
+    if (!isAdmin) {
+      allowed = allowed.filter((s) => s !== "REJECTED" && s !== "CLOSED");
+    }
+
+    // Complainants cannot unilaterally resolve cases
+    if (actorRole === "complainant") {
+      allowed = allowed.filter((s) => s !== "RESOLVED");
+    }
+
+    return allowed;
+  }
+
+  /**
    * Internal validation of the lifecycle state machine
    */
   static validateTransition(from, to, actorRole) {
-    const validTransitions = {
-      SUBMITTED: ["ACKNOWLEDGED", "UNDER_REVIEW", "REJECTED"],
-      ACKNOWLEDGED: ["UNDER_REVIEW", "IN_PROGRESS", "REJECTED"],
-      UNDER_REVIEW: ["IN_PROGRESS", "AWAITING_COMPLAINANT_RESPONSE", "ESCALATED", "REJECTED"],
-      IN_PROGRESS: ["AWAITING_COMPLAINANT_RESPONSE", "AWAITING_INTERNAL_REVIEW", "ESCALATED", "RESOLVED"],
-      AWAITING_COMPLAINANT_RESPONSE: ["IN_PROGRESS", "ESCALATED"],
-      AWAITING_INTERNAL_REVIEW: ["RESOLVED", "IN_PROGRESS", "ESCALATED"],
-      RESOLVED: ["CLOSED", "IN_PROGRESS"],
-      CLOSED: [],
-      ESCALATED: ["IN_PROGRESS", "UNDER_REVIEW", "RESOLVED"],
-      REJECTED: []
-    };
-    const allowed = validTransitions[from] || [];
+    const allowed = this.getAllowedTransitions(from, actorRole);
     if (!allowed.includes(to)) {
       const err = new Error(
         `Invalid workflow transition: Cannot move complaint status from '${from}' to '${to}'. Allowed next states: [${allowed.join(", ") || "None"}]`

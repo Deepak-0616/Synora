@@ -18,6 +18,32 @@ import {
   Download,
   Flame
 } from "lucide-react";
+
+const STATUS_LABELS = {
+  SUBMITTED: "Submitted (Fresh Case)",
+  ACKNOWLEDGED: "Acknowledged (Formal Receipt)",
+  UNDER_REVIEW: "Under Review (Preliminary Triage)",
+  IN_PROGRESS: "In Progress (Active Investigation)",
+  AWAITING_COMPLAINANT_RESPONSE: "Awaiting Complainant Response (RFI)",
+  AWAITING_INTERNAL_REVIEW: "Awaiting Internal Review (Resolution Audit)",
+  RESOLVED: "Resolved (Investigation Findings Finalized)",
+  CLOSED: "Closed (Archived Formal Record)",
+  ESCALATED: "Escalated (Higher Council Oversight)",
+  REJECTED: "Rejected (Ineligible / Frivolous)"
+};
+
+const STATUS_DESCRIPTIONS = {
+  ACKNOWLEDGED: "Formally acknowledges grievance receipt and generates audit verification timestamps.",
+  UNDER_REVIEW: "Case assigned for preliminary scrutiny, evidence correlation, and jurisdiction review.",
+  IN_PROGRESS: "Active investigation underway by assigned vigilance officer and inspection cell.",
+  AWAITING_COMPLAINANT_RESPONSE: "Temporarily holds SLA while awaiting crucial documentary clarification from complainant.",
+  AWAITING_INTERNAL_REVIEW: "Findings recorded; pending Bureau Director review and sign-off on proposed resolution.",
+  RESOLVED: "Investigation concluded. Directives and remedial action issued to institution and complainant.",
+  CLOSED: "Final administrative closeout. All relief or enforcement penalties executed.",
+  ESCALATED: "Transfers priority handling to Directorate, Ombudsman, and State Supervisory Committee.",
+  REJECTED: "Formal rejection due to lack of jurisdiction, duplicate filing, or malicious petition."
+};
+
 export const ComplaintDetailPage = () => {
   const { id } = useParams();
   const { user, token, isStaff, isComplainant, canAssignCase, canApproveResolution } = useAuth();
@@ -178,6 +204,44 @@ export const ComplaintDetailPage = () => {
       setSubmittingRfi(false);
     }
   };
+
+  const getAvailableTransitions = () => {
+    if (!complaint) return [];
+    if (complaint.allowed_transitions && Array.isArray(complaint.allowed_transitions)) {
+      return complaint.allowed_transitions;
+    }
+    const isAdmin = user?.role === "system_admin" || user?.role === "bureau_admin";
+    const transitions = {
+      SUBMITTED: ["ACKNOWLEDGED", "UNDER_REVIEW", "IN_PROGRESS", "REJECTED"],
+      ACKNOWLEDGED: ["UNDER_REVIEW", "IN_PROGRESS", "AWAITING_COMPLAINANT_RESPONSE", "ESCALATED", "REJECTED"],
+      UNDER_REVIEW: ["IN_PROGRESS", "ACKNOWLEDGED", "AWAITING_COMPLAINANT_RESPONSE", "AWAITING_INTERNAL_REVIEW", "RESOLVED", "ESCALATED", "REJECTED"],
+      IN_PROGRESS: ["AWAITING_COMPLAINANT_RESPONSE", "AWAITING_INTERNAL_REVIEW", "UNDER_REVIEW", "ACKNOWLEDGED", "RESOLVED", "ESCALATED"],
+      AWAITING_COMPLAINANT_RESPONSE: ["IN_PROGRESS", "UNDER_REVIEW", "AWAITING_INTERNAL_REVIEW", "RESOLVED", "ESCALATED"],
+      AWAITING_INTERNAL_REVIEW: ["RESOLVED", "IN_PROGRESS", "UNDER_REVIEW", "ESCALATED"],
+      RESOLVED: ["CLOSED", "IN_PROGRESS", "UNDER_REVIEW"],
+      CLOSED: isAdmin ? ["IN_PROGRESS", "UNDER_REVIEW", "RESOLVED"] : [],
+      ESCALATED: ["IN_PROGRESS", "UNDER_REVIEW", "AWAITING_INTERNAL_REVIEW", "RESOLVED"],
+      REJECTED: isAdmin ? ["UNDER_REVIEW", "IN_PROGRESS"] : []
+    };
+    let allowed = transitions[complaint.status] || [];
+    if (!isAdmin) {
+      allowed = allowed.filter((s) => s !== "REJECTED" && s !== "CLOSED");
+    }
+    return allowed;
+  };
+
+  const handleOpenTransitionModal = () => {
+    setTransitionError(null);
+    setTransitionNote("");
+    const available = getAvailableTransitions();
+    if (available.length > 0) {
+      setSelectedNextStatus(available[0]);
+    } else {
+      setSelectedNextStatus("");
+    }
+    setShowTransitionModal(true);
+  };
+
   const handleTransitionStatus = async () => {
     if (!id) return;
     setTransitionError(null);
@@ -324,10 +388,7 @@ export const ComplaintDetailPage = () => {
               </button>}
 
             <button
-    onClick={() => {
-      setTransitionError(null);
-      setShowTransitionModal(true);
-    }}
+    onClick={handleOpenTransitionModal}
     className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm"
   >
               Update Status
@@ -952,50 +1013,75 @@ export const ComplaintDetailPage = () => {
               <span>{transitionError}</span>
             </div>
           )}
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Next Workflow Status</label>
-            <select
-    value={selectedNextStatus}
-    onChange={(e) => setSelectedNextStatus(e.target.value)}
-    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
-  >
-              <option value="ACKNOWLEDGED">Acknowledged</option>
-              <option value="UNDER_REVIEW">Under Review</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="AWAITING_COMPLAINANT_RESPONSE">Awaiting Complainant Response</option>
-              <option value="AWAITING_INTERNAL_REVIEW">Awaiting Internal Review</option>
-              <option value="RESOLVED">Resolved</option>
-              <option value="CLOSED">Closed</option>
-              <option value="ESCALATED">Escalated</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Current Status</span>
+              <span className="font-bold text-slate-800 text-xs">{complaint.status.replace(/_/g, " ")}</span>
+            </div>
+            <StatusBadge status={complaint.status} />
           </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Status Note (Public Log)</label>
-            <textarea
-    rows={2}
-    value={transitionNote}
-    onChange={(e) => setTransitionNote(e.target.value)}
-    placeholder="Document the milestone reason for updating the workflow status..."
-    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
-  />
-          </div>
+          {getAvailableTransitions().length === 0 ? (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 space-y-1">
+              <p className="font-bold">Case Lifecycle Concluded</p>
+              <p className="text-[11px] text-amber-800">
+                This grievance is currently in <strong>{complaint.status}</strong>, which is a terminal state. No further status changes can be performed.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Permitted Next Workflow Status *</label>
+                <select
+                  value={selectedNextStatus}
+                  onChange={(e) => {
+                    setSelectedNextStatus(e.target.value);
+                    if (transitionError) setTransitionError(null);
+                  }}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 shadow-sm"
+                >
+                  {getAvailableTransitions().map((st) => (
+                    <option key={st} value={st}>
+                      {STATUS_LABELS[st] || st.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                  {STATUS_DESCRIPTIONS[selectedNextStatus] || "Advance the case through the statutory institutional grievance lifecycle."}
+                </p>
+              </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-    onClick={() => setShowTransitionModal(false)}
-    className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
-  >
-              Cancel
-            </button>
-            <button
-    onClick={handleTransitionStatus}
-    className="px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 font-bold"
-  >
-              Confirm Transition
-            </button>
-          </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Status Note / Milestone Justification (Public Log)</label>
+                <textarea
+                  rows={2}
+                  value={transitionNote}
+                  onChange={(e) => setTransitionNote(e.target.value)}
+                  placeholder="Document the milestone reason for updating the workflow status..."
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTransitionModal(false)}
+                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTransitionStatus}
+                  disabled={!selectedNextStatus}
+                  className="px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 font-bold disabled:opacity-50 shadow-sm"
+                >
+                  Confirm Transition
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 
