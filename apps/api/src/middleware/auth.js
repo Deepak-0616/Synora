@@ -1,16 +1,18 @@
 import { verifyToken } from "../utils/jwt.js";
 export function authenticateToken(req, res, next) {
+  let token = null;
   const authHeader = req.headers["authorization"];
-  if (!authHeader) {
-    res.status(401).json({ error: "Authentication required. Authorization header missing." });
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
+  }
+
+  if (!token) {
+    res.status(401).json({ error: "Authentication required. Authorization token missing." });
     return;
   }
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0] !== "Bearer") {
-    res.status(401).json({ error: "Invalid authorization format. Expected: Bearer <token>" });
-    return;
-  }
-  const token = parts[1];
+
   try {
     const payload = verifyToken(token);
     req.user = payload;

@@ -23,7 +23,7 @@ export const ClientDashboard = () => {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [user?.id]);
   const loadDashboardData = async () => {
     try {
       setLoading(true);

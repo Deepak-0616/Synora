@@ -16,9 +16,9 @@ export const createComplaintSchema = z.object({
   category: z.string().min(2, "Category is required"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).default("MEDIUM"),
   institution_name: z.string().min(3, "Institution name is required"),
-  institution_id: z.string().optional().nullable(),
-  incident_date: z.string().optional().nullable(),
-  bureau_id: z.string().uuid().optional().nullable()
+  institution_id: z.preprocess((v) => (!v ? null : v), z.string().optional().nullable()),
+  incident_date: z.preprocess((v) => (!v ? null : v), z.string().optional().nullable()),
+  bureau_id: z.preprocess((v) => (!v ? null : v), z.string().min(5).optional().nullable())
 });
 export const updateComplaintSchema = z.object({
   title: z.string().min(5).optional(),
@@ -28,8 +28,8 @@ export const updateComplaintSchema = z.object({
   institution_name: z.string().optional()
 });
 export const assignComplaintSchema = z.object({
-  bureau_id: z.string().uuid().optional().nullable(),
-  officer_id: z.string().uuid().optional().nullable(),
+  bureau_id: z.preprocess((v) => (!v ? null : v), z.string().min(5).optional().nullable()),
+  officer_id: z.preprocess((v) => (!v ? null : v), z.string().min(5).optional().nullable()),
   notes: z.string().optional()
 });
 export const transitionStatusSchema = z.object({
@@ -64,5 +64,5 @@ export const proposeResolutionSchema = z.object({
 });
 export const escalateComplaintSchema = z.object({
   reason: z.string().min(10, "Detailed escalation reason is required"),
-  to_bureau_id: z.string().uuid().optional().nullable()
+  to_bureau_id: z.preprocess((v) => (!v ? null : v), z.string().min(5).optional().nullable())
 });

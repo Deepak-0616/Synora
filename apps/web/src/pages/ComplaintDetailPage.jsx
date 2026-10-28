@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 export const ComplaintDetailPage = () => {
   const { id } = useParams();
-  const { user, isStaff, isComplainant, canAssignCase, canApproveResolution } = useAuth();
+  const { user, token, isStaff, isComplainant, canAssignCase, canApproveResolution } = useAuth();
   const [complaint, setComplaint] = useState(null);
   const [history, setHistory] = useState([]);
   const [internalNotes, setInternalNotes] = useState([]);
@@ -52,11 +52,13 @@ export const ComplaintDetailPage = () => {
   const [complainantSummary, setComplainantSummary] = useState("");
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
+  const [downloadingDocId, setDownloadingDocId] = useState(null);
+
   useEffect(() => {
     if (id) {
       loadComplaintData();
     }
-  }, [id]);
+  }, [id, user?.id]);
   const loadComplaintData = async () => {
     if (!id) return;
     try {
@@ -174,9 +176,9 @@ export const ComplaintDetailPage = () => {
     if (!id) return;
     try {
       await api.post(`/complaints/${id}/assignments`, {
-        bureau_id: assignBureauId || void 0,
-        officer_id: assignOfficerId || void 0,
-        notes: assignNotes
+        bureau_id: assignBureauId ? assignBureauId : null,
+        officer_id: assignOfficerId ? assignOfficerId : null,
+        notes: assignNotes || ""
       });
       setShowAssignModal(false);
       loadComplaintData();
@@ -216,6 +218,25 @@ export const ComplaintDetailPage = () => {
       loadComplaintData();
     } catch (err) {
       alert(err.message || "Failed to escalate case");
+    }
+  };
+
+  const handleDownloadDocument = async (doc) => {
+    try {
+      setDownloadingDocId(doc.id);
+      const blob = await api.get(`/complaints/documents/${doc.id}/download`);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      alert(err.message || "Failed to download document");
+    } finally {
+      setDownloadingDocId(null);
     }
   };
   if (loading) {
@@ -556,14 +577,14 @@ export const ComplaintDetailPage = () => {
                       </div>
                     </div>
 
-                    <a
-    href={`/api/v1/complaints/documents/${doc.id}/download`}
-    target="_blank"
-    rel="noreferrer"
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
-  >
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </a>
+                    <button
+                      onClick={() => handleDownloadDocument(doc)}
+                      disabled={downloadingDocId === doc.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      {downloadingDocId === doc.id ? "Downloading..." : "Download"}
+                    </button>
                   </div>)}
               </div>}
           </div>}

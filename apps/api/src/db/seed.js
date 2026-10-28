@@ -5,9 +5,9 @@ import { runMigrations } from "./migrate.js";
 export async function seedDatabase(force = false) {
   await runMigrations();
 
-  const userCount = await db.queryOne("SELECT count(*) as count FROM users;");
-  if (userCount && userCount.count > 0 && !force) {
-    console.log(`[Seed] Database already contains ${userCount.count} users. Skipping seed.`);
+  const complaintCount = await db.queryOne("SELECT count(*) as count FROM complaints;");
+  if (complaintCount && complaintCount.count >= 10 && !force) {
+    console.log(`[Seed] Database already contains ${complaintCount.count} complaints. Skipping seed.`);
     return;
   }
 
@@ -333,6 +333,24 @@ export async function seedDatabase(force = false) {
       created_at: new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString(),
       resolved_at: new Date(now.getTime() - 8 * 24 * 3600 * 1000).toISOString(),
       closed_at: new Date(now.getTime() - 5 * 24 * 3600 * 1000).toISOString()
+    },
+    // Case 10: Unassigned Approval Bureau Case (Allows Bureau Director Meenakshi to test Assign / Reassign!)
+    {
+      id: "c1000000-0000-0000-0000-000000000010",
+      ref: "SYN-2026-00110",
+      complainant_id: "u1000000-0000-0000-0000-000000000007",
+      title: "Unapproved establishment of second campus without AICTE Extension of Approval (EOA)",
+      description: "Institution has commenced admitting students for an unapproved extension campus in Coimbatore claiming AICTE affiliation without mandatory inspection or EOA sanction order.",
+      category: "Approval & Accreditation",
+      priority: "HIGH",
+      status: "SUBMITTED",
+      institution: "Kovai Technical Institute, Coimbatore",
+      inst_id: "1-92837102",
+      incident_date: "2026-10-26",
+      bureau_id: "b1000000-0000-0000-0000-000000000001",
+      officer_id: null,
+      target_date: new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
+      created_at: new Date(now.getTime() - 2 * 3600 * 1000).toISOString()
     }
   ];
 
@@ -393,7 +411,9 @@ export async function seedDatabase(force = false) {
     // Case 7 timeline
     { id: "h7001", cid: "c1000000-0000-0000-0000-000000000007", actor: "u1000000-0000-0000-0000-000000000007", from: null, to: "SUBMITTED", note: "Grievance submitted", date: new Date(now.getTime() - 5 * 24 * 3600 * 1000).toISOString() },
     { id: "h7002", cid: "c1000000-0000-0000-0000-000000000007", actor: "u1000000-0000-0000-0000-000000000004", from: "SUBMITTED", to: "IN_PROGRESS", note: "Surprise campus inspection conducted", date: new Date(now.getTime() - 3 * 24 * 3600 * 1000).toISOString() },
-    { id: "h7003", cid: "c1000000-0000-0000-0000-000000000007", actor: "u1000000-0000-0000-0000-000000000004", from: "IN_PROGRESS", to: "AWAITING_INTERNAL_REVIEW", note: "Formal closure notice drafted; submitted for Bureau Admin approval", date: new Date(now.getTime() - 12 * 3600 * 1000).toISOString() }
+    { id: "h7003", cid: "c1000000-0000-0000-0000-000000000007", actor: "u1000000-0000-0000-0000-000000000004", from: "IN_PROGRESS", to: "AWAITING_INTERNAL_REVIEW", note: "Formal closure notice drafted; submitted for Bureau Admin approval", date: new Date(now.getTime() - 12 * 3600 * 1000).toISOString() },
+    // Case 10 timeline
+    { id: "h10001", cid: "c1000000-0000-0000-0000-000000000010", actor: "u1000000-0000-0000-0000-000000000007", from: null, to: "SUBMITTED", note: "Grievance submitted by complainant", date: new Date(now.getTime() - 2 * 3600 * 1000).toISOString() }
   ];
 
   for (const h of historyEntries) {
@@ -634,6 +654,17 @@ export async function seedDatabase(force = false) {
       is_read: 0,
       link: "/complaints/c1000000-0000-0000-0000-000000000007",
       created_at: new Date(now.getTime() - 2 * 3600 * 1000).toISOString()
+    },
+    {
+      id: "m1000000-0000-0000-0000-000000000005",
+      user_id: "u1000000-0000-0000-0000-000000000002",
+      complaint_id: "c1000000-0000-0000-0000-000000000010",
+      type: "UNASSIGNED_CASE_ALERT",
+      title: "New Unassigned Case in Approval Bureau",
+      message: "Unapproved campus case SYN-2026-00110 requires vigilance officer assignment.",
+      is_read: 0,
+      link: "/complaints/c1000000-0000-0000-0000-000000000010",
+      created_at: new Date(now.getTime() - 1 * 3600 * 1000).toISOString()
     },
 
     // System Admin Rajesh notifications

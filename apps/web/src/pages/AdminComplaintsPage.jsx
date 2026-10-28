@@ -28,7 +28,7 @@ export const AdminComplaintsPage = () => {
   }, []);
   useEffect(() => {
     loadComplaints();
-  }, [page, statusFilter, priorityFilter, categoryFilter, bureauFilter]);
+  }, [page, statusFilter, priorityFilter, categoryFilter, bureauFilter, user?.id, user?.bureau_id, user?.role]);
   const loadBureaus = async () => {
     try {
       const data = await api.get("/bureaus");

@@ -27,7 +27,7 @@ export const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [user?.id, user?.bureau_id, user?.role]);
   const loadDashboard = async () => {
     try {
       setLoading(true);

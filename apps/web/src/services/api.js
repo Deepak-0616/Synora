@@ -38,7 +38,12 @@ class ApiClient {
       throw new Error(errorMessage);
     }
     const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("text/csv")) {
+    if (
+      contentType &&
+      (contentType.includes("text/csv") ||
+        contentType.includes("application/pdf") ||
+        contentType.includes("application/octet-stream"))
+    ) {
       return response.blob();
     }
     return response.json();

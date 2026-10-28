@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { StatusBadge, PriorityBadge, SLABadge } from "../components/StatusBadge";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -13,6 +14,7 @@ import {
   ArrowRight
 } from "lucide-react";
 export const MyComplaintsPage = () => {
+  const { user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -20,7 +22,7 @@ export const MyComplaintsPage = () => {
   const [priorityFilter, setPriorityFilter] = useState("");
   useEffect(() => {
     loadComplaints();
-  }, [statusFilter, priorityFilter]);
+  }, [statusFilter, priorityFilter, user?.id]);
   const loadComplaints = async () => {
     try {
       setLoading(true);
