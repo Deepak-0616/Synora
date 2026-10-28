@@ -5,13 +5,9 @@ import { runMigrations } from "./migrate.js";
 export async function seedDatabase(force = false) {
   await runMigrations();
 
-  const complaintCount = await db.queryOne("SELECT count(*) as count FROM complaints;");
-  if (complaintCount && complaintCount.count >= 10 && !force) {
-    console.log(`[Seed] Database already contains ${complaintCount.count} complaints. Skipping seed.`);
-    return;
-  }
+  const isTest = process.env.NODE_ENV === "test";
 
-  console.log("[Seed] Seeding database with comprehensive AICTE institutional test dataset...");
+  console.log("[Seed] Verifying system bureaus and persona user accounts...");
 
   // Default demo password for all seed accounts
   const defaultHash = bcrypt.hashSync("Synora@2026!", 10);
@@ -161,6 +157,13 @@ export async function seedDatabase(force = false) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1);`,
       [u.id, u.email, defaultHash, u.name, u.phone, u.role, u.bureau_id, u.designation]
     );
+  }
+
+  // Only seed dummy complaints if explicitly forced or running automated test fixtures
+  if (!force && !isTest) {
+    db.save();
+    console.log("[Seed] Base bureaus and persona users verified. Database complaints kept clean.");
+    return;
   }
 
   const now = new Date();
@@ -743,12 +746,38 @@ export async function seedDatabase(force = false) {
   console.log("[Seed] Database successfully seeded with 9 comprehensive cases, timeline events, documents, and notifications.");
 }
 
+export async function clearComplaints() {
+  await runMigrations();
+  await db.execute("DELETE FROM assignments;");
+  await db.execute("DELETE FROM complaint_status_history;");
+  await db.execute("DELETE FROM complaint_documents;");
+  await db.execute("DELETE FROM internal_notes;");
+  await db.execute("DELETE FROM information_requests;");
+  await db.execute("DELETE FROM resolutions;");
+  await db.execute("DELETE FROM escalations;");
+  await db.execute("DELETE FROM ai_analyses;");
+  await db.execute("DELETE FROM notifications WHERE complaint_id IS NOT NULL;");
+  await db.execute("DELETE FROM complaints;");
+  db.save();
+  console.log("[DB] Successfully removed all existing complaints and associated case records.");
+}
+
 if (process.argv[1] && (process.argv[1].includes("seed.js") || process.argv[1].includes("seed.ts") || process.argv[1].endsWith("seed"))) {
-  seedDatabase(true).then(() => {
-    console.log("Seed command completed.");
-    process.exit(0);
-  }).catch((err) => {
-    console.error("Seed command failed:", err);
-    process.exit(1);
-  });
+  if (process.argv.includes("--clear") || process.argv.includes("-c")) {
+    clearComplaints().then(() => {
+      console.log("Database cleared successfully.");
+      process.exit(0);
+    }).catch((err) => {
+      console.error("Clear command failed:", err);
+      process.exit(1);
+    });
+  } else {
+    seedDatabase(true).then(() => {
+      console.log("Seed command completed.");
+      process.exit(0);
+    }).catch((err) => {
+      console.error("Seed command failed:", err);
+      process.exit(1);
+    });
+  }
 }

@@ -181,6 +181,12 @@ export class ComplaintService {
    * Retrieves single complaint details after checking user permission scope
    */
   static async getComplaintById(id, userId, userRole, userBureauId) {
+    if (!userBureauId && userId && (userRole === "officer" || userRole === "bureau_admin")) {
+      const userRec = await db.queryOne("SELECT bureau_id FROM users WHERE id = ?;", [userId]);
+      if (userRec) {
+        userBureauId = userRec.bureau_id;
+      }
+    }
     const complaint = await db.queryOne(
       `SELECT c.*,
               u.full_name as complainant_name,
@@ -378,18 +384,24 @@ export class ComplaintService {
         "ACKNOWLEDGED",
         "UNDER_REVIEW",
         "IN_PROGRESS",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "ESCALATED",
         "REJECTED"
       ],
       ACKNOWLEDGED: [
         "UNDER_REVIEW",
         "IN_PROGRESS",
         "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
         "ESCALATED",
         "REJECTED"
       ],
       UNDER_REVIEW: [
-        "IN_PROGRESS",
         "ACKNOWLEDGED",
+        "IN_PROGRESS",
         "AWAITING_COMPLAINANT_RESPONSE",
         "AWAITING_INTERNAL_REVIEW",
         "RESOLVED",
@@ -397,16 +409,18 @@ export class ComplaintService {
         "REJECTED"
       ],
       IN_PROGRESS: [
+        "ACKNOWLEDGED",
+        "UNDER_REVIEW",
         "AWAITING_COMPLAINANT_RESPONSE",
         "AWAITING_INTERNAL_REVIEW",
-        "UNDER_REVIEW",
-        "ACKNOWLEDGED",
         "RESOLVED",
-        "ESCALATED"
+        "ESCALATED",
+        "CLOSED"
       ],
       AWAITING_COMPLAINANT_RESPONSE: [
         "IN_PROGRESS",
         "UNDER_REVIEW",
+        "ACKNOWLEDGED",
         "AWAITING_INTERNAL_REVIEW",
         "RESOLVED",
         "ESCALATED"
@@ -415,21 +429,29 @@ export class ComplaintService {
         "RESOLVED",
         "IN_PROGRESS",
         "UNDER_REVIEW",
-        "ESCALATED"
+        "ACKNOWLEDGED",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "ESCALATED",
+        "CLOSED"
       ],
       RESOLVED: [
         "CLOSED",
         "IN_PROGRESS",
-        "UNDER_REVIEW"
+        "UNDER_REVIEW",
+        "ACKNOWLEDGED",
+        "AWAITING_INTERNAL_REVIEW"
       ],
-      CLOSED: isAdmin ? ["IN_PROGRESS", "UNDER_REVIEW", "RESOLVED"] : [],
+      CLOSED: isAdmin ? ["IN_PROGRESS", "UNDER_REVIEW", "ACKNOWLEDGED", "RESOLVED"] : [],
       ESCALATED: [
         "IN_PROGRESS",
         "UNDER_REVIEW",
+        "ACKNOWLEDGED",
+        "AWAITING_COMPLAINANT_RESPONSE",
         "AWAITING_INTERNAL_REVIEW",
-        "RESOLVED"
+        "RESOLVED",
+        "CLOSED"
       ],
-      REJECTED: isAdmin ? ["UNDER_REVIEW", "IN_PROGRESS"] : []
+      REJECTED: isAdmin ? ["UNDER_REVIEW", "IN_PROGRESS", "ACKNOWLEDGED"] : []
     };
 
     let allowed = standardTransitions[from] || [];

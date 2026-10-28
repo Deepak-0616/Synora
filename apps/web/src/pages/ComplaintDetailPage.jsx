@@ -212,16 +212,78 @@ export const ComplaintDetailPage = () => {
     }
     const isAdmin = user?.role === "system_admin" || user?.role === "bureau_admin";
     const transitions = {
-      SUBMITTED: ["ACKNOWLEDGED", "UNDER_REVIEW", "IN_PROGRESS", "REJECTED"],
-      ACKNOWLEDGED: ["UNDER_REVIEW", "IN_PROGRESS", "AWAITING_COMPLAINANT_RESPONSE", "ESCALATED", "REJECTED"],
-      UNDER_REVIEW: ["IN_PROGRESS", "ACKNOWLEDGED", "AWAITING_COMPLAINANT_RESPONSE", "AWAITING_INTERNAL_REVIEW", "RESOLVED", "ESCALATED", "REJECTED"],
-      IN_PROGRESS: ["AWAITING_COMPLAINANT_RESPONSE", "AWAITING_INTERNAL_REVIEW", "UNDER_REVIEW", "ACKNOWLEDGED", "RESOLVED", "ESCALATED"],
-      AWAITING_COMPLAINANT_RESPONSE: ["IN_PROGRESS", "UNDER_REVIEW", "AWAITING_INTERNAL_REVIEW", "RESOLVED", "ESCALATED"],
-      AWAITING_INTERNAL_REVIEW: ["RESOLVED", "IN_PROGRESS", "UNDER_REVIEW", "ESCALATED"],
-      RESOLVED: ["CLOSED", "IN_PROGRESS", "UNDER_REVIEW"],
-      CLOSED: isAdmin ? ["IN_PROGRESS", "UNDER_REVIEW", "RESOLVED"] : [],
-      ESCALATED: ["IN_PROGRESS", "UNDER_REVIEW", "AWAITING_INTERNAL_REVIEW", "RESOLVED"],
-      REJECTED: isAdmin ? ["UNDER_REVIEW", "IN_PROGRESS"] : []
+      SUBMITTED: [
+        "ACKNOWLEDGED",
+        "UNDER_REVIEW",
+        "IN_PROGRESS",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "ESCALATED",
+        "REJECTED"
+      ],
+      ACKNOWLEDGED: [
+        "UNDER_REVIEW",
+        "IN_PROGRESS",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "ESCALATED",
+        "REJECTED"
+      ],
+      UNDER_REVIEW: [
+        "ACKNOWLEDGED",
+        "IN_PROGRESS",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "ESCALATED",
+        "REJECTED"
+      ],
+      IN_PROGRESS: [
+        "ACKNOWLEDGED",
+        "UNDER_REVIEW",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "ESCALATED",
+        "CLOSED"
+      ],
+      AWAITING_COMPLAINANT_RESPONSE: [
+        "IN_PROGRESS",
+        "UNDER_REVIEW",
+        "ACKNOWLEDGED",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "ESCALATED"
+      ],
+      AWAITING_INTERNAL_REVIEW: [
+        "RESOLVED",
+        "IN_PROGRESS",
+        "UNDER_REVIEW",
+        "ACKNOWLEDGED",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "ESCALATED",
+        "CLOSED"
+      ],
+      RESOLVED: [
+        "CLOSED",
+        "IN_PROGRESS",
+        "UNDER_REVIEW",
+        "ACKNOWLEDGED",
+        "AWAITING_INTERNAL_REVIEW"
+      ],
+      CLOSED: isAdmin ? ["IN_PROGRESS", "UNDER_REVIEW", "ACKNOWLEDGED", "RESOLVED"] : [],
+      ESCALATED: [
+        "IN_PROGRESS",
+        "UNDER_REVIEW",
+        "ACKNOWLEDGED",
+        "AWAITING_COMPLAINANT_RESPONSE",
+        "AWAITING_INTERNAL_REVIEW",
+        "RESOLVED",
+        "CLOSED"
+      ],
+      REJECTED: isAdmin ? ["UNDER_REVIEW", "IN_PROGRESS", "ACKNOWLEDGED"] : []
     };
     let allowed = transitions[complaint.status] || [];
     if (!isAdmin) {
