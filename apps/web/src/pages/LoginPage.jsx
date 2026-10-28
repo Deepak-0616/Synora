@@ -178,19 +178,16 @@ export const LoginPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setDemoAccount("bureau.admin@synora.aicte.gov.in")}
-                className="p-2.5 rounded-lg border border-slate-200 hover:border-purple-500 hover:bg-purple-50/50 text-xs text-left transition-colors"
-              >
-                <div className="font-bold text-slate-800">Bureau Director</div>
-                <div className="text-[10px] text-slate-500 truncate">Approval Bureau</div>
-              </button>
-              <button
-                type="button"
                 onClick={() => setDemoAccount("admin@synora.aicte.gov.in")}
-                className="p-2.5 rounded-lg border border-slate-200 hover:border-rose-500 hover:bg-rose-50/50 text-xs text-left transition-colors"
+                className="col-span-2 p-2.5 rounded-lg border border-slate-200 hover:border-rose-500 hover:bg-rose-50/50 text-xs text-left transition-colors flex items-center justify-between"
               >
-                <div className="font-bold text-slate-800">System Admin</div>
-                <div className="text-[10px] text-slate-500 truncate">All Bureaus & Audit</div>
+                <div>
+                  <div className="font-bold text-slate-800">System Admin (Dr. Rajesh Sharma)</div>
+                  <div className="text-[10px] text-slate-500">Universal Access: All Bureaus, Assignments, Resolutions & Audit</div>
+                </div>
+                <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Full Authority
+                </span>
               </button>
             </div>
           </div>

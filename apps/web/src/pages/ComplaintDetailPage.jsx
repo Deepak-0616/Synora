@@ -37,7 +37,7 @@ const STATUS_DESCRIPTIONS = {
   UNDER_REVIEW: "Case assigned for preliminary scrutiny, evidence correlation, and jurisdiction review.",
   IN_PROGRESS: "Active investigation underway by assigned vigilance officer and inspection cell.",
   AWAITING_COMPLAINANT_RESPONSE: "Temporarily holds SLA while awaiting crucial documentary clarification from complainant.",
-  AWAITING_INTERNAL_REVIEW: "Findings recorded; pending Bureau Director review and sign-off on proposed resolution.",
+  AWAITING_INTERNAL_REVIEW: "Findings recorded; pending administrative authority review and sign-off on proposed resolution.",
   RESOLVED: "Investigation concluded. Directives and remedial action issued to institution and complainant.",
   CLOSED: "Final administrative closeout. All relief or enforcement penalties executed.",
   ESCALATED: "Transfers priority handling to Directorate, Ombudsman, and State Supervisory Committee.",
@@ -608,7 +608,7 @@ export const ComplaintDetailPage = () => {
   }
           {isStaff && !resolution.approved_at && canApproveResolution && <div className="flex items-center justify-between pt-2">
               <span className="text-xs font-bold text-emerald-800">
-                Pending Bureau Director Final Approval
+                Pending Administrative Authority Final Approval
               </span>
               <button
     onClick={() => handleApproveResolution(resolution.id)}
