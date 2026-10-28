@@ -52,7 +52,7 @@ export const Navbar = () => {
     /* Logo and Institution Context */
   }
         <div className="flex items-center gap-6">
-          <Logo size="md" />
+          <Logo size="md" theme="light" />
         </div>
 
         {

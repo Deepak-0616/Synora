@@ -39,7 +39,7 @@ export const RegisterPage = () => {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center mb-6">
-          <Logo size="lg" withTagline={false} linkToHome={false} />
+          <Logo size="lg" theme="dark" withTagline={false} linkToHome={false} />
         </div>
         <h2 className="text-center text-2xl font-extrabold text-white tracking-tight">
           Create Complainant Account
